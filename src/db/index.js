@@ -9,8 +9,21 @@ const connectDB=async()=>{
         
     } catch (error) {
         console.log("MONGO_DB connection FAILED ",error);
+        throw error;
         process.exit(1)
     }
 }
+
+/* const connectDB = () => {
+  mongoose.connect(`${process.env.DB_URL}/${DB_NAME}`)
+    .then((connection_instance) => {
+      console.log(`yayy! mongodb connected DB_HOST: ${connection_instance.connection.host}`);
+    })
+    .catch((error) => {
+      console.log("MONGO_DB connection FAILED ", error);
+      process.exit(1);
+    });
+};
+ */
 
 export default connectDB

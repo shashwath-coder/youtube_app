@@ -2,6 +2,7 @@
 import dotenv from "dotenv"//very very important so tht all the env variables are available evrywhere in the code
 import connectDB from "./db/index.js"
 
+
 /* import mongoose from "mongoose"
 import {DB_NAME} from "./constants.js" */
 
@@ -9,8 +10,19 @@ dotenv.config({
     path:"./env"
 });
 
-connectDB()
 
+
+
+connectDB()// this is a async await call, and async await will always return promise which can be handled using .then ,.catch
+.then(()=>{
+    app.listen(process.env.PORT||8000,()=>{
+        console.log(`server is running on PORT ${process.env.PORT}`);
+    })
+})
+.catch((error)=>
+{
+    console.log("mongodb connection failed");
+})
 
 // BELOW IS APPROACH 1
 
