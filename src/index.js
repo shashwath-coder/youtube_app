@@ -1,13 +1,14 @@
 //require('dotenv').config({path:'./env'})// tthis also can be used but only when u dont do type:module in package.json
 import dotenv from "dotenv"//very very important so tht all the env variables are available evrywhere in the code
 import connectDB from "./db/index.js"
+import {app} from "./app.js"
 
 
 /* import mongoose from "mongoose"
 import {DB_NAME} from "./constants.js" */
 
 dotenv.config({
-    path:"./env"
+    path:"./.env"
 });
 
 

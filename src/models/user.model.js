@@ -54,7 +54,7 @@ const user_schema=new Schema({
     }
 },{timestamps:true})
 
-//.pre is a middleware .. this says tht just before user_schema is saved in db , hash the password if password is changed
+//.pre is a middleware/hook .. this says tht just before user_schema is saved in db , hash the password if password is changed
 user_schema.pre("save",async function (next) {
     if(this.isModified("password")) // only when password is modified , is when u hash it again
     {
