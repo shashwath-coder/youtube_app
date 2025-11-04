@@ -15,7 +15,7 @@ const register_user=asyncHandler(async(req,res)=>{
      //check for user creation
      // return response
 
-     const{username, email,password,full_name}=req.body
+     const{username, email,password,full_name}=req.body  // in postman whatever we put in body , req.body will hv tht
      //console.log(req.body);
      
      if(full_name==="")
@@ -31,13 +31,13 @@ const register_user=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"password is too short. minimum 8 characters");
      }
 
-     const existed_user=User.findOne(
+     const existed_user=await User.findOne(
         {
-            $or:[{username},{email}] // to check if the same username or email is already in the User database
+           $or: [{email},{username}] // to check if the same username or email is already in the User database
         }
     )
 
-   /*  console.log("this is the existed user -> ",existed_user); */
+    //console.log("this is the existed user -> ",existed_user._id);
     if(existed_user)
     {
         throw new ApiError (409,"given email or username is already taken")
@@ -47,9 +47,20 @@ const register_user=asyncHandler(async(req,res)=>{
     console.log(User); */
     
     // below .files func is provided by multer and tht avatar and cover_image is present inside/included in the req 
-    const avatar_local_path=req.files?.avatar[0]?.path;
-    const cover_image_local_path=req.files?.cover_image[0]?.path;
+    const avatar_local_path=req.files?.avatar?.[0]?.path;
+    // Multer stores uploaded files in req.files as arrays (since multiple files can be uploaded per field).
+// So, req.files.cover_image[0].path gives the local path of the first uploaded 'cover_image' file.
+    const cover_image_local_path=req.files?.cover_image?.[0]?.path;
 
+    // or u can check like below
+    /* let cover_image_local_path;
+    if(req.files&&Array.isArray(req.files.cover_image)&&req.files.cover_image.length>0)
+    {
+        cover_image_local_path=req.files.cover_image[0].path
+    } */
+
+    //console.log(req.files);
+    
     if(!avatar_local_path)
     {
         throw new ApiError(400,"avatar file is required")
@@ -71,6 +82,8 @@ const register_user=asyncHandler(async(req,res)=>{
         username:username.toLowerCase()
     })
 
+    //console.log(user);
+    
     //below id is automatically added by mongodb into whatever u create
    // also removal of password and refresh token is done below...(exact same to write)
     const created_user=await User.findById(user._id).select(
