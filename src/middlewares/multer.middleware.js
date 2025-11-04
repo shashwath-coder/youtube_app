@@ -1,6 +1,5 @@
 import multer from "multer";
 
-const multer=require('multer')
 
 //cb ->callback , The callback function to tell Multer what to do next
 const storage=multer.diskStorage({

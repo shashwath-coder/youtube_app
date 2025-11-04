@@ -3,7 +3,7 @@ import fs from "fs" // fs=file system . this is used for file manipulation
 
 cloudinary.config({
     cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
-    api_key:CLOUDINARY_API_KEY,
+    api_key:process.env.CLOUDINARY_API_KEY,
     api_secret:process.env.CLOUDINARY_API_SECRET
 });
 
@@ -18,6 +18,7 @@ const upload_on_cloudinary= async(local_file_path)=>{
             resource_type:"auto"
         })
         console.log("file has been successfully uploaded onto cloudinary!",response.url);
+        console.log(response);
         return response;
     }
     catch(error){
