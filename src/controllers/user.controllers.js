@@ -100,6 +100,77 @@ const register_user=asyncHandler(async(req,res)=>{
    )
 })
 
+const generate_access_and_refresh_tokens=async(user_id)=>{
+    try {
+        const user=await User.findById(user_id)
+        const access_token=user.generate_access_token()
+        const refresh_token=user.generate_refresh_token();
+
+        user.refresh_token=refresh_token
+
+        // this user.save will also lead to changes in the db
+        await user.save({validateBeforeSave:false}) // this is smthng given by mongoose , so tht password is not asked everytime and saved , when only tokens are generated 
+        
+        return {access_token,refresh_token}
+    } 
+    catch (error) {
+        throw new ApiError(500,"something went wrong while generating access and refresh tokens")
+    }
+}
+const login_user=asyncHandler(async(req,res)=>{
+    //req body ->data
+    //username or email
+    // find the user
+    //password check
+    //access and refresh token
+    //send cookie
+
+    const{username,email}= req.body;
+    if(!username||!email)
+    {
+        throw new ApiError(400,"username or email is required!")
+    }
+
+    const user=await User.findOne({
+        $or:[{username},{email}]
+    })
+    if(!user)
+    {
+        throw new ApiError(404,"user does not exist");
+    }
+
+    const is_password_valid=await user.is_password_correct(password)
+
+    if(!is_password_valid)
+    {
+        throw new ApiError(401,"Invalid user credentials")
+    }
+
+   const{access_token,refresh_token}= await generate_access_and_refresh_tokens(user._id)
+
+   user.access_token=access_token
+   user.refresh_token=""
+   user.password=""
+
+   const options={ // this will lead to cookies being modifyable only in server and we can only see it in the browser
+    httpOnly:true,
+    secure:true
+   }
+
+   return res
+   .status(200)
+   .cookie("access_token",access_token,options)
+   .cookie("refresh_token",refresh_token,options)
+   .json(
+    new ApiResponse(
+        200,
+        {
+            user:user,access_token,refresh_token
+        },
+        "user logged in successfully"
+    )
+   )
+})
 /* if not using asyncc handler     
 const register_user=async(req,res)=>{
         try{
@@ -113,4 +184,31 @@ const register_user=async(req,res)=>{
         return null;
     }
     } */
-export{register_user}
+
+    const logout_user=asyncHandler(async(req,res)=>{
+        await User.findByIdAndUpdate(
+            req.user._id,
+            
+                {$set:{
+                    refresh_token:undefined
+                }},
+                {
+                    new:true
+                },
+
+            
+         )
+    const options={ // this will lead to cookies being modifyable only in server and we can only see it in the browser
+    httpOnly:true,
+    secure:true
+   }
+   return res
+   .status(200)
+   .clearCookie("access_token",options)
+   .clearCookie("refresh_token",options)
+   .json(new ApiResponse(200,{},"User logged out"))
+    })
+export{register_user,
+    login_user,
+    logout_user
+}

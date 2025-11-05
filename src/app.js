@@ -3,7 +3,7 @@ import cors from "cors"
 import cookieParser from "cookie-parser" 
 
 
-const app=express()
+const app=express() // all req and res are done in express.. so all req and res will hv access to the below ,like json , cors, cookie etc
 
 app.use(cors({
     origin:process.env.CORS_ORIGIN,

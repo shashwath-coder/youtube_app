@@ -1,7 +1,8 @@
 import { Router } from "express";
-import {register_user} from "../controllers/user.controllers.js"
+import {login_user, register_user,logout_user} from "../controllers/user.controllers.js"
 
 import {upload} from "../middlewares/multer.middleware.js"
+import { verify_jwt } from "../middlewares/auth.middleware.js";
 const router=Router()
 
 router.route('/register').post(
@@ -18,4 +19,8 @@ router.route('/register').post(
         }
     ]),
     register_user)
+
+router.route("/login").post(login_user)
+
+router.route("/logout").post(verify_jwt,logout_user) // verify_jwt is the middleware whihc is injected before logout_user is executed
 export default router
