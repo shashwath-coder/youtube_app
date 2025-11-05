@@ -1,7 +1,7 @@
-import { asyncHandler } from "../utils/async_handler";
-import { ApiError } from "../utils/ApiError";
+import { asyncHandler } from "../utils/async_handler.js";
+import { ApiError } from "../utils/ApiError.js";
 import jwt from "jsonwebtoken"
-import User from "../models/user.model.js"
+import {User} from "../models/user.model.js"
 
 // so when user logs in to his acc , he is provided with an access token...
 // so while logging out , browser checks if the user has tht access token ie he is the one who logged in
