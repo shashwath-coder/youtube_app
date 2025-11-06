@@ -26,6 +26,7 @@ export const verify_jwt=asyncHandler(async(req,_,next)=>{
             throw new ApiError(401,"Invalid Access Token")
         }
     
+        //important and after checking safety, this step is taken
         req.user=user; // added user into the req , since access token is present with the user
         next()
     } catch (error) {
