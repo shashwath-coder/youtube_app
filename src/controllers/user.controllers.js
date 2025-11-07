@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/async_handler.js";
 import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.model.js"  // so this User can call mongodb and access its data how many ever times... just use rthis whereever u want
-import { upload_on_cloudinary } from "../models/cloudinary.js";
+import { upload_on_cloudinary,get_public_url_id } from "../models/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -287,7 +287,7 @@ const change_curr_password=asyncHandler(async(req,res)=>{
 const get_curr_user= asyncHandler(async(req,res)=>{
     return res
     .status(200)
-    .json(200,req.user,"current user fetched successfully!")
+    .json(new ApiResponse(200,req.user,"current user fetched successfully!"))
 })
 
 const update_acc_details=asyncHandler(async(req,res)=>{
@@ -298,7 +298,7 @@ const update_acc_details=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"All fields are required")
     }
 
-    const user=User.findByIdAndUpdate(
+    const user=await User.findByIdAndUpdate(
         req.user?._id,
         {
            $set:{
@@ -323,12 +323,15 @@ const update_user_avatar=asyncHandler(async(req,res)=>{
     }
     const avatar=await upload_on_cloudinary(avatar_local_path)
 
+    let user=await User.findById(req.user?._id)
+
+    const old_avatar_url=user?.avatar;
     if(!avatar.url)
     {
         throw new ApiError(400,"error while uploading avatar")
     }
 
-    const user = User.findByIdAndUpdate(
+    user = await User.findByIdAndUpdate(
         req.user?._id,
         {
         $set:{
@@ -340,6 +343,7 @@ const update_user_avatar=asyncHandler(async(req,res)=>{
         }
     ).select("-password")
 
+    await get_public_url_id(old_avatar_url)
     return res
     .status(200)
     .json(new ApiResponse(200,user,"user avatar updated"))
@@ -358,7 +362,7 @@ const update_user_cover_image=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"error while uploading avatar")
     }
 
-    const user=User.findByIdAndUpdate(
+    const user= await User.findByIdAndUpdate(
         req.user?._id,
         {
         $set:{
