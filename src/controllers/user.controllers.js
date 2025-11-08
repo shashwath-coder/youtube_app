@@ -509,6 +509,14 @@ const get_watch_history=asyncHandler(async(req,res)=>{
         }
     }
     ])
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        user[0].watch_history,
+        "Watch history fetched successfully"
+    ))
 })
 
 export{register_user,
@@ -520,5 +528,6 @@ export{register_user,
     update_acc_details,
     update_user_avatar,
     update_user_cover_image,
-    get_user_channel_profile
+    get_user_channel_profile,
+    get_watch_history
 }
