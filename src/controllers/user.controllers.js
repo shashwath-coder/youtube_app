@@ -4,6 +4,7 @@ import {User} from "../models/user.model.js"  // so this User can call mongodb a
 import { upload_on_cloudinary,get_public_url_id } from "../models/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const register_user=asyncHandler(async(req,res)=>{
      //get user details from frontend
@@ -374,8 +375,142 @@ const update_user_cover_image=asyncHandler(async(req,res)=>{
         }
     ).select("-password")
 
-    
+    return res
+    .status(200)
+    .json(new ApiResponse(200,user,"user cover image updated"))
 })
+
+const get_user_channel_profile=asyncHandler(async(req,res)=>{
+
+    const {username}=req.params
+
+    if(!username?.trim())
+    {
+        throw new ApiError(400,"username is missing")
+    }
+
+    const channel=await User.aggregate([
+        //this is how pipelining is done
+    {
+        $match:{
+            username:username?.toLowerCase()
+        }
+    },
+    {
+        $lookup:{
+            from:"subscriptions",
+            localField:"_id",  //from current collection/db ie User
+            foreignField:"channel",// field from the 'subscriptions' collection
+            as:"subscribers"
+        }
+    },
+    {
+        $lookup:{
+            from:"subscriptions",
+            localField:"_id",  
+            foreignField:"subscriber",
+            as:"subscribed_to"
+        }
+    },
+    {
+        //this will add extra fields into User db
+        $addFields:{
+            subscbribers_count:{
+                $size:"$subscribers" //$ put before subscribers , since its a field now
+            },
+            channels_subscribed_to_count:{
+                $size:"$subscribed_to"
+            }
+        },
+        is_subscribed:{
+            cond:{
+                if:{$in :[req.user?.id,"subscribers.subscriber"]},
+                then:true,
+                else:false
+            }
+        }
+    },
+    {
+        $project:
+        {
+            full_name:1,
+            username:1,
+            subscbribers_count:1,
+            channels_subscribed_to_count:1,
+            avatar:1,
+            is_subscribed:1,
+            cover_image:1,
+            email:1
+        }
+    }
+])
+
+if(!channel?.length)
+{
+    throw new ApiError(404,"channel does not exist")
+}
+
+
+return res
+.status(200)
+.json(
+    new ApiResponse(200,channel[0],"user channel fetched successfully")
+)
+})
+
+const get_watch_history=asyncHandler(async(req,res)=>{
+    const user=await User.aggregate([
+        {
+            $match:{
+                _id:mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+        $lookup:{
+            //For each user, find all documents in the videos collection
+            //whose _id matches any ID inside the user’s watch_history array.
+            from:"videos",
+            localField:"watch_history",//which currently has just video IDs
+            foreignField:"_id",
+            as:"watch_history",
+            pipeline:[
+                {
+                    $lookup:{
+                        //Now, for each video, it finds the matching owner document from the users collection
+                        //and replaces owner with full user info.
+                        from:"users",
+                        localField:"owner",
+                        foreignField:"_id",
+                        as:"owner",
+
+                        //u can work without below pipeline aswell
+                        //But if you want to manipulate or filter the joined data —
+                        //like selecting only some fields ($project) or sorting/filtering inside that join —
+                        //then you must use a pipeline.
+                        // thus preventing sensitive info like tokens etc from being displayed
+                        pipeline:[
+                            {
+                                $project:{
+                                    full_name:1,
+                                    username:1,
+                                    avatar:1
+                                }
+                            },
+                            {
+                                $addFields:{
+                                    $first:"$owner" // now u can write owner.username instead of owner[0].username... good for frontend
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+            
+        }
+    }
+    ])
+})
+
 export{register_user,
     login_user,
     logout_user,
@@ -384,5 +519,6 @@ export{register_user,
     get_curr_user,
     update_acc_details,
     update_user_avatar,
-    update_user_cover_image
+    update_user_cover_image,
+    get_user_channel_profile
 }
