@@ -4,11 +4,11 @@ import { User } from "./user.model";
 const subscription_schema=new Schema(
     {
         subscriber:{
-            type:mongoose.Schema.types.ObjectId, //one whose subscribing
+            type:Schema.Types.ObjectId, //one whose subscribing
             ref:"User"
         },
         channel:{
-            type:mongoose.Schema.types.ObjectId, //one to whom "subscriber" is subscribing
+            type:Schema.Types.ObjectId, //one to whom "subscriber" is subscribing
             ref:"User"
         }
     }

@@ -4,19 +4,19 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const video_schema=new Schema(
     {
         video_file:{
-            type:Sting,//cloudinary url
+            type:String,//cloudinary url
             required:true
         },
         thumbnail:{
-            type:Sting,//cloudinary url
+            type:String,//cloudinary url
             required:true
         },  
         title:{
-            type:Sting,
+            type:String,
             required:true
         },
         description:{
-            type:Sting,
+            type:String,
             required:true
         },
         duration:{
@@ -39,3 +39,5 @@ const video_schema=new Schema(
 )
 
 video_schema.plugin(mongooseAggregatePaginate) // now we can write aggregation queries
+
+export const Video = mongoose.model("Video",video_schema);

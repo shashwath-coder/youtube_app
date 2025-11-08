@@ -5,12 +5,15 @@ import {login_user,
         refresh_access_token, 
         change_curr_password, 
         get_curr_user, 
+        update_acc_details,
         update_user_avatar, 
         update_user_cover_image, 
         get_user_channel_profile, 
-        get_watch_history} 
+        get_watch_history,
+        } 
         from "../controllers/user.controllers.js"
 
+import {upload_video} from "../controllers/video.controllers.js"
 import {upload} from "../middlewares/multer.middleware.js"
 import { verify_jwt } from "../middlewares/auth.middleware.js";
 const router=Router()
@@ -38,9 +41,27 @@ router.route("/refresh_token").post(refresh_access_token)
 
 router.route("/change_password").post(verify_jwt,change_curr_password)
 router.route("/current_user").get(verify_jwt,get_curr_user)
-router.route("/update_account").patch(verify_jwt,get_curr_user) // write patch so tht not all details get overwritten, and only the ones which user wants to update gets updated
-router.route("/avatar").get(verify_jwt,upload.single("avatar"),update_user_avatar)
-router.route("/cover_image").get(verify_jwt,upload.single("cover_image"),update_user_cover_image)
+router.route("/update_account").patch(verify_jwt,update_acc_details) // write patch so tht not all details get overwritten, and only the ones which user wants to update gets updated
+router.route("/avatar").patch(verify_jwt,upload.single("avatar"),update_user_avatar)
+router.route("/cover_image").patch(verify_jwt,upload.single("cover_image"),update_user_cover_image)
 router.route("/c/:username").get(verify_jwt,get_user_channel_profile)
 router.route("/history").get(verify_jwt,get_watch_history)
+
+router.post(
+    "/upload",
+    verify_jwt,
+    upload.fields([
+        {name:"video",maxCount:1},
+        {name:"thumbnail",maxCount:1}
+    ]),
+    upload_video
+
+)/* It means:
+
+“Hey multer, expect two file uploads in this request:
+
+one field named video (only 1 file allowed)
+
+one field named thumbnail (only 1 file allowed)”  */
+//you definitely need upload.fields() here because you’re uploading two separate files (video + thumbnail) in one request.
 export default router
