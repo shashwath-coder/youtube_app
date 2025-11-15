@@ -34,7 +34,8 @@ const user_schema=new Schema({
     watch_history:[
         {
             type:mongoose.Schema.Types.ObjectId,
-            ref:"Video"
+            ref:"Video",
+            default:[]
         }
     ],
     password:{

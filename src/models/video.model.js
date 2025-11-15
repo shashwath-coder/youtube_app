@@ -32,7 +32,7 @@ const video_schema=new Schema(
             default:true
         },
         owner:{
-            type:Schema.Types.ObjectId,
+            type:Schema.Types.ObjectId,// reference to a user
             ref:"User"
         }
     },{timestamps:true}

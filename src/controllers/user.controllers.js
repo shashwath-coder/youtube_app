@@ -198,7 +198,6 @@ const register_user=async(req,res)=>{
                     new:true
                 },
 
-            
          )
     const options={ // this will lead to cookies being modifyable only in server and we can only see it in the browser
     httpOnly:true,
@@ -292,28 +291,43 @@ const get_curr_user= asyncHandler(async(req,res)=>{
 })
 
 const update_acc_details=asyncHandler(async(req,res)=>{
+
+    const user_id=req.user?._id
     const {full_name,email,username}=req.body
 
-    if(!full_name||!email||!username)
+
+    const existingUser = await User.findById(user_id);
+
+    /* if (!existingUser) {
+    throw new ApiError(404, "User not found");
+  } //since we r dng verify_jwt as a middleware before updating the acc details , we can skip this if statement
+ */
+   if (!email && !username && !full_name) {
+    throw new ApiError(400, "At least one field (username, email, or full_name) is required to update");
+  }
+
+    if(username===existingUser.username || email===existingUser.email)
     {
-        throw new ApiError(400,"All fields are required")
+        throw new ApiError(400, "Please provide a new username or email");
     }
 
-    const user=await User.findByIdAndUpdate(
+
+    const updatedUser=await User.findByIdAndUpdate(
         req.user?._id,
         {
            $set:{
-            full_name,
-            email
-           }
+            full_name:full_name||existingUser.full_name,
+            email:email||existingUser.email,
+            username:username || existingUser.username
+           },
         },
         {new:true}
     ).select("-password")
 
     return res
     .status(200)
-    .json(new ApiResponse(200,user,"account details updated successfully"))
-})
+    .json(new ApiResponse(200,updatedUser,"account details updated successfully"))
+});
 
 const update_user_avatar=asyncHandler(async(req,res)=>{
     const avatar_local_path=req.file?.path
@@ -360,7 +374,7 @@ const update_user_cover_image=asyncHandler(async(req,res)=>{
 
     if(!cover_image.url)
     {
-        throw new ApiError(400,"error while uploading avatar")
+        throw new ApiError(400,"error while uploading cover image")
     }
 
     const user= await User.findByIdAndUpdate(
@@ -380,7 +394,7 @@ const update_user_cover_image=asyncHandler(async(req,res)=>{
     .json(new ApiResponse(200,user,"user cover image updated"))
 })
 
-const get_user_channel_profile=asyncHandler(async(req,res)=>{
+/* const get_user_channel_profile=asyncHandler(async(req,res)=>{
 
     const {username}=req.params
 
@@ -389,6 +403,7 @@ const get_user_channel_profile=asyncHandler(async(req,res)=>{
         throw new ApiError(400,"username is missing")
     }
 
+    console.log(username);
     const channel=await User.aggregate([
         //this is how pipelining is done
     {
@@ -421,7 +436,7 @@ const get_user_channel_profile=asyncHandler(async(req,res)=>{
             channels_subscribed_to_count:{
                 $size:"$subscribed_to"
             }
-        },
+        ,
         is_subscribed:{
             cond:{
                 if:{$in :[req.user?.id,"subscribers.subscriber"]},
@@ -429,7 +444,8 @@ const get_user_channel_profile=asyncHandler(async(req,res)=>{
                 else:false
             }
         }
-    },
+    }
+},
     {
         $project:
         {
@@ -444,6 +460,7 @@ const get_user_channel_profile=asyncHandler(async(req,res)=>{
         }
     }
 ])
+console.log(channel[0]);
 
 if(!channel?.length)
 {
@@ -457,67 +474,84 @@ return res
     new ApiResponse(200,channel[0],"user channel fetched successfully")
 )
 })
+ */
 
-const get_watch_history=asyncHandler(async(req,res)=>{
-    const user=await User.aggregate([
+const get_user_channel_profile = asyncHandler(async (req, res) => {
+    const { username } = req.params;
+    if (!username?.trim()) throw new ApiError(400, "username is missing");
+
+    // convert current user id to ObjectId once, or null if unauthenticated
+    const currentUserId = req.user ?new mongoose.Types.ObjectId(req.user._id) : null;
+
+    const channel = await User.aggregate([
+        { $match: { username: username.toLowerCase() } },
         {
-            $match:{
-                _id:mongoose.Types.ObjectId(req.user._id)
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
             }
         },
         {
-        $lookup:{
-            //For each user, find all documents in the videos collection
-            //whose _id matches any ID inside the user’s watch_history array.
-            from:"videos",
-            localField:"watch_history",//which currently has just video IDs
-            foreignField:"_id",
-            as:"watch_history",
-            pipeline:[
-                {
-                    $lookup:{
-                        //Now, for each video, it finds the matching owner document from the users collection
-                        //and replaces owner with full user info.
-                        from:"users",
-                        localField:"owner",
-                        foreignField:"_id",
-                        as:"owner",
-
-                        //u can work without below pipeline aswell
-                        //But if you want to manipulate or filter the joined data —
-                        //like selecting only some fields ($project) or sorting/filtering inside that join —
-                        //then you must use a pipeline.
-                        // thus preventing sensitive info like tokens etc from being displayed
-                        pipeline:[
-                            {
-                                $project:{
-                                    full_name:1,
-                                    username:1,
-                                    avatar:1
-                                }
-                            },
-                            {
-                                $addFields:{
-                                    $first:"$owner" // now u can write owner.username instead of owner[0].username... good for frontend
-                                }
-                            }
-                        ]
-                    }
-                }
-            ]
-            
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribed_to"
+            }
+        },
+        {
+            // all computed fields must live under $addFields
+            $addFields: {
+                subscribers_count: { $size: "$subscribers" },
+                channels_subscribed_to_count: { $size: "$subscribed_to" },
+                // compute is_subscribed using $in against the array of subscriber ids
+                is_subscribed: currentUserId
+                    ? { $in: [currentUserId, "$subscribers.subscriber"] }
+                    : false
+            }
+        },
+        {
+            $project: {
+                full_name: 1,
+                username: 1,
+                subscribers_count: 1,
+                channels_subscribed_to_count: 1,
+                avatar: 1,
+                is_subscribed: 1,
+                cover_image: 1,
+                email: 1
+            }
         }
-    }
-    ])
+    ]);
 
-    return res
-    .status(200)
-    .json(new ApiResponse(
-        200,
-        user[0].watch_history,
-        "Watch history fetched successfully"
-    ))
+    if (!channel?.length) throw new ApiError(404, "channel does not exist");
+    return res.status(200).json(new ApiResponse(200, channel[0], "user channel fetched successfully"));
+});
+
+const get_watch_history=asyncHandler(async(req,res)=>{
+    const user_id=req.user?._id;
+    const user= await User.findById(user_id).select("watch_history")
+    console.log("loggedInUser:", user);
+
+    if(!user_id) throw new ApiError(401,"Unauthorized");
+
+    user
+    .populate({
+        path:"watch_history",
+        select:"title thumbnail duration views video_file createdAt owner",
+        populate:{
+            path:"owner",
+            select:"username full_name avatar"
+        }
+    });
+    const watch_history=user?.watch_history||[];
+
+    return res.status(200)
+    .json(new ApiResponse(200,watch_history,"watch history fetched successfully"));
 })
+
 
 export{register_user,
     login_user,

@@ -13,7 +13,7 @@ import {login_user,
         } 
         from "../controllers/user.controllers.js"
 
-import {upload_video} from "../controllers/video.controllers.js"
+
 import {upload} from "../middlewares/multer.middleware.js"
 import { verify_jwt } from "../middlewares/auth.middleware.js";
 const router=Router()
@@ -21,7 +21,8 @@ const router=Router()
 router.route('/register').post(
     //below upload is how middlewares are injected
     // also this middleware(and middlewares in general) add more fields to the req.body
-     upload.fields([
+    // Since multiple possible fields , so we need to write req.files in video controllers
+    upload.fields([
         {
             name:"avatar",
             maxCount:1
@@ -47,21 +48,4 @@ router.route("/cover_image").patch(verify_jwt,upload.single("cover_image"),updat
 router.route("/c/:username").get(verify_jwt,get_user_channel_profile)
 router.route("/history").get(verify_jwt,get_watch_history)
 
-router.post(
-    "/upload",
-    verify_jwt,
-    upload.fields([
-        {name:"video",maxCount:1},
-        {name:"thumbnail",maxCount:1}
-    ]),
-    upload_video
-
-)/* It means:
-
-“Hey multer, expect two file uploads in this request:
-
-one field named video (only 1 file allowed)
-
-one field named thumbnail (only 1 file allowed)”  */
-//you definitely need upload.fields() here because you’re uploading two separate files (video + thumbnail) in one request.
-export default router
+export default router;
