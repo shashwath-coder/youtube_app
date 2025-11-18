@@ -34,7 +34,21 @@ const video_schema=new Schema(
         owner:{
             type:Schema.Types.ObjectId,// reference to a user
             ref:"User"
-        }
+        },
+        likes: [
+          {
+            type: Schema.Types.ObjectId,
+            ref: "User"
+          }
+        ],
+        dislikes: [
+          {
+            type: Schema.Types.ObjectId,
+            ref: "User"
+          }
+        ],
+        likes_count: { type: Number, default: 0 },
+        dislikes_count: { type: Number, default: 0 },
     },{timestamps:true}
 )
 

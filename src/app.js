@@ -16,7 +16,6 @@ app.use(express.static("public"))
 app.use(cookieParser())//cookie parser is for accessing browser cookies of the user and do crud operations on it
 
 import user_router  from "./routes/user.routes.js" //Works perfectly, since you exported default router.
-
 app.use('/api/v1/users',user_router); // so ones theres /users in the url , control gets passed to user.routes
 
 import video_router from "./routes/video.routes.js"
