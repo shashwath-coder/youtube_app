@@ -27,6 +27,7 @@ const upload_video=asyncHandler(async(req,res)=>{
     }
 
     const uploaded_video=await upload_on_cloudinary(video_path);
+    console.log(uploaded_video)
     if(!uploaded_video) 
     {
         throw new ApiError(500,"Video upload failed")
@@ -208,9 +209,35 @@ const toggle_dislike=asyncHandler(async(req,res)=>{
     const updated=await Video.findById(id).select("likes_count dislikes_count likes dislikes");
     return res.status(200).json(new ApiResponse(200, { disliked: !disliked, video: updated }, "Toggled like"));
 })
+
+import { get_signed_video_url_from_url } from "../models/cloudinary.js";
+
+const stream_video=asyncHandler(async(req,res)=>{
+    const{id}=req.params;
+    if(!mongoose.Types.ObjectId.isValid(id)) {
+        throw new ApiError(400,"Invalid video ID");
+    }
+
+    const video=await Video.findById(id).select("video_file");
+    if(!video) {
+        throw new ApiError(404,"Video not found");
+    }
+
+    if(process.env.CLOUDINARY_SIGNED==='true')
+    {
+        const signed=await get_signed_video_url_from_url(video.video_file);
+        if(signed)
+        {
+            return res.redirect(signed);
+        }
+        return res.redirect(video.video_file);
+    }
+
+});
 export {
     upload_video,
     get_video,
     toggle_like,
-    toggle_dislike
+    toggle_dislike,
+    stream_video
 }

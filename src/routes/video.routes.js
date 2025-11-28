@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verify_jwt } from "../middlewares/auth.middleware.js";
-import { get_video,toggle_like, toggle_dislike, upload_video } from "../controllers/video.controllers.js";
+import { get_video,toggle_like, toggle_dislike, upload_video, stream_video } from "../controllers/video.controllers.js";
 
 const router = Router();
 
@@ -28,4 +28,5 @@ router.route('/:id').get(verify_jwt,get_video) // without verify_jwt there will 
 
 router.route("/:id/like").post(verify_jwt, toggle_like);
 router.route("/:id/dislike").post(verify_jwt, toggle_dislike);
+router.route("/:id/stream").get(verify_jwt,stream_video);
 export default router;

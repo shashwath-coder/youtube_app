@@ -530,6 +530,7 @@ const get_user_channel_profile = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, channel[0], "user channel fetched successfully"));
 });
 
+
 const get_watch_history=asyncHandler(async(req,res)=>{
     const user_id=req.user?._id;
     const user= await User.findById(user_id).select("watch_history")

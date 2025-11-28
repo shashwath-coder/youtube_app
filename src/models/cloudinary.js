@@ -38,9 +38,6 @@ const get_public_url_id=async(url)=>{
             const folder=url_parts.slice(url_parts.indexOf('upload')+1).join('/')
             const public_id=end_part.split('.')[0]
             const old_url_id=`${folder}/${public_id}`
-        
-        
-    
         if(old_url_id)
         {
            await cloudinary.uploader.destroy(old_url_id)
@@ -49,6 +46,27 @@ const get_public_url_id=async(url)=>{
             throw new ApiError(500,"Error while deleting the old avatar")
         }
 }
+
+const get_signed_video_url_from_url=async(url)=>{
+    try{
+        if(!url) return null;
+        const url_parts=url.split('/')
+        const end_part=url_parts.pop()
+        const folder=url_parts.slice(url_parts.indexOf('upload')+1).join('/')
+        const public_id=end_part.split('.')[0]
+        const publicPath=folder?`${folder}/${public_id}`:public_id
+        
+        return cloudinary.url(publicPath,{
+            resource_type:"video",
+            secure:true,
+            sign_url:true
+        });
+    }
+    catch(error){
+        return null;
+    }
+}
 export {upload_on_cloudinary,
-        get_public_url_id
+        get_public_url_id,
+        get_signed_video_url_from_url
 };
