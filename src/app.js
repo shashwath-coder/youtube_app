@@ -20,4 +20,9 @@ app.use('/api/v1/users',user_router); // so ones theres /users in the url , cont
 
 import video_router from "./routes/video.routes.js"
 app.use('/api/v1/videos',video_router)
+
+
+import subscribe_router from "./routes/subscribe.routes.js"
+app.use('/api/v1/subscriptions',subscribe_router)
+
 export {app} // now i can use this anywhere without writing import statements etc for app
