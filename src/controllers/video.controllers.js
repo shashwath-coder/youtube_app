@@ -9,6 +9,14 @@ const upload_video=asyncHandler(async(req,res)=>{
 
     const video_path=req.files?.video?.[0].path;
     const thumbnail_path=req.files?.thumbnail?.[0].path;
+    let tags = req.body.tags || [];
+
+     if (typeof tags === "string") {
+     tags = tags
+    .split(",")
+    .map(t => t.trim())
+    .filter(Boolean);
+}
     if(!video_path)
     {
         throw new ApiError(400,"video file is required")
@@ -46,7 +54,8 @@ const upload_video=asyncHandler(async(req,res)=>{
         title,
         description:description,
         duration, // uploaded_video has duration property in it which cloudinary itself provides 
-        owner:req.user._id
+        owner:req.user._id,
+        tags: tags
     })
 
     return res
@@ -214,15 +223,20 @@ import { get_signed_video_url_from_url } from "../models/cloudinary.js";
 
 const stream_video=asyncHandler(async(req,res)=>{
     const{id}=req.params;
+
     if(!mongoose.Types.ObjectId.isValid(id)) {
         throw new ApiError(400,"Invalid video ID");
     }
 
-    const video=await Video.findById(id).select("video_file");
+    const video = await Video.findByIdAndUpdate(
+        id,
+        { $inc: { views: 1 } },
+        { new: true }
+    ).select("video_file public_id");
     if(!video) {
         throw new ApiError(404,"Video not found");
     }
-
+   
     if(process.env.CLOUDINARY_SIGNED==='true')
     {
         const signed=await get_signed_video_url_from_url(video.video_file);
@@ -232,12 +246,89 @@ const stream_video=asyncHandler(async(req,res)=>{
         }
         return res.redirect(video.video_file);
     }
+    
+    const is_owner =
+        req.user && video.owner && video.owner._id
+            ? video.owner._id.equals(req.user._id)
+            : false;
 
+    if (req.user && !is_owner) {
+        try {
+            // $pull then $push — two quick ops (atomic multi-op transactions would be ideal for strict consistency)
+            await User.findByIdAndUpdate(
+                req.user._id,
+                { $pull: { watch_history: video._id } },
+                { useFindAndModify: false }
+            );
+
+            await User.findByIdAndUpdate(
+                req.user._id,
+                {
+                    $push: {
+                        watch_history: {
+                            $each: [video._id],
+                            $position: 0,
+                            $slice: 100
+                        }
+                    }
+                },
+                { useFindAndModify: false }
+            );
+        } catch (e) {
+            // don't break the response if history update fails; log silently
+            console.error("watch_history update failed", e);
+        }
+    }
 });
+
+
+// GET /api/v1/videos?q=...&tags=tag1,tag2&owner=<id>&page=1&limit=12&sort=views|recent
+const search_videos = asyncHandler(async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 12));
+  const skip = (page - 1) * limit;
+
+  const filter = { is_published: true };
+
+  if (q) {
+    // prefer $text search (requires the model text index); fallback to regex when needed
+    filter.$text = { $search: q };
+  }
+
+  if (req.query.tags) {
+    const tags = Array.isArray(req.query.tags)
+      ? req.query.tags
+      : String(req.query.tags).split(",").map((t) => t.trim()).filter(Boolean);
+    if (tags.length) filter.tags = { $in: tags };
+  }
+
+  if (req.query.owner && mongoose.Types.ObjectId.isValid(req.query.owner)) {
+    filter.owner = req.query.owner;
+  }
+
+  // sorting: default recent, allow 'views' for popularity
+  const sortBy = req.query.sort === "views" ? { views: -1 } : { createdAt: -1 };
+
+  const [items, total] = await Promise.all([
+    Video.find(filter)
+      .sort(sortBy)
+      .skip(skip)
+      .limit(limit)
+      .populate("owner", "username full_name avatar"),
+    Video.countDocuments(filter)
+  ]);
+
+  return res.status(200).json(new ApiResponse(200, { items, page, limit, total }, "Search results"));
+});
+
+
+
 export {
     upload_video,
     get_video,
     toggle_like,
     toggle_dislike,
-    stream_video
+    stream_video,
+    search_videos
 }

@@ -35,6 +35,7 @@ const video_schema=new Schema(
             type:Schema.Types.ObjectId,// reference to a user
             ref:"User"
         },
+        tags: [{ type: String, index: true }],
         likes: [
           {
             type: Schema.Types.ObjectId,
@@ -51,7 +52,7 @@ const video_schema=new Schema(
         dislikes_count: { type: Number, default: 0 },
     },{timestamps:true}
 )
-
+video_schema.index({ title: "text", description: "text", tags: "text" });
 video_schema.plugin(mongooseAggregatePaginate) // now we can write aggregation queries
 
 export const Video = mongoose.model("Video",video_schema);
