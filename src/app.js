@@ -25,4 +25,7 @@ app.use('/api/v1/videos',video_router)
 import subscribe_router from "./routes/subscribe.routes.js"
 app.use('/api/v1/subscriptions',subscribe_router)
 
+import recommend_router from "./routes/recommend.routes.js"
+app.use('/api/v1/recommendations', recommend_router)
+
 export {app} // now i can use this anywhere without writing import statements etc for app

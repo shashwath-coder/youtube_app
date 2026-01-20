@@ -50,4 +50,4 @@ This tells Mongoose:
 
 “Whenever this document is converted to JSON (for API response) or a plain JS object, include the virtual fields.” */
 
-export const comment=mongoose.model("Comment",comment_schema)
+export const comment=mongoose.model("comment",comment_schema)
